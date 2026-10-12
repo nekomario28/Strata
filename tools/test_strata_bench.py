@@ -230,6 +230,14 @@ class ProfileSaveSafetyTests(unittest.TestCase):
             self.assertIn("expert_profile_save", stderr.getvalue())
             self.assertGreater(srv.requests, 0)
 
+    def test_warns_when_attached_server_profile_settings_are_unknown(self):
+        srv = FakeStrata()
+        self.addCleanup(srv.stop)
+        with tempfile.TemporaryDirectory() as d, mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            result = B.main(["--url", srv.base, "--quiet", "--runs", "1", "--out", d])
+            self.assertEqual(result, 0)
+            self.assertIn("cannot inspect", stderr.getvalue())
+
 
 class ReportTests(unittest.TestCase):
     def setUp(self):
