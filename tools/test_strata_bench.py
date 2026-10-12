@@ -2,6 +2,7 @@
 writing and the comparison.  Light: no GPU, no Strata server, a few seconds."""
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
@@ -202,6 +203,32 @@ class RedactionTests(unittest.TestCase):
         self.assertEqual(v["env"], {"STRATA_FOO": "z"})
         self.assertEqual(B.detect_quant(v), "IQ3_XXS")
         self.assertNotIn("hunter2", json.dumps(v))
+
+
+class ProfileSaveSafetyTests(unittest.TestCase):
+    def test_detects_both_profile_save_config_forms(self):
+        self.assertFalse(B.saves_expert_profile(None))
+        self.assertFalse(B.saves_expert_profile({"args": ["--expert-profile", "profile.bin"]}))
+        self.assertFalse(B.saves_expert_profile({"expert_profile_save": "", "args": ["--expert-profile-save-every", "5"]}))
+        self.assertTrue(B.saves_expert_profile({"expert_profile_save": "learned.bin"}))
+        self.assertTrue(B.saves_expert_profile({"args": ["--expert-profile-save", "learned.bin"]}))
+        self.assertTrue(B.saves_expert_profile({"args": ["--expert-profile-save=learned.bin"]}))
+
+    def test_warns_with_quiet_when_attached_config_enables_profile_save(self):
+        srv = FakeStrata()
+        self.addCleanup(srv.stop)
+        with tempfile.TemporaryDirectory() as d:
+            cfg = Path(d) / "strata-test.json"
+            cfg.write_text(json.dumps({"exe": "strata", "args": ["--expert-profile", "original.bin"],
+                                       "expert_profile_save": "learned.bin"}), encoding="utf-8")
+            stderr = io.StringIO()
+            with mock.patch("sys.stderr", stderr):
+                result = B.main(["--url", srv.base, "--config", str(cfg), "--quiet", "--runs", "1",
+                                 "--out", str(Path(d) / "results")])
+            self.assertEqual(result, 0)
+            self.assertIn("WARNING", stderr.getvalue())
+            self.assertIn("expert_profile_save", stderr.getvalue())
+            self.assertGreater(srv.requests, 0)
 
 
 class ReportTests(unittest.TestCase):
