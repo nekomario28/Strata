@@ -891,6 +891,10 @@ def main(argv=None) -> int:
               "periodically or when a benchmark-started server exits. For repeatable results, use a fixed "
               "--expert-profile and disable --expert-profile-save / expert_profile_save in the bench config.",
               file=sys.stderr)
+    elif a.url and cfg is None:
+        print("WARNING: --url without --config cannot inspect the attached server's expert-profile-save settings. "
+              "Benchmark prompts may modify a saved expert profile; disable saving for repeatable results.",
+              file=sys.stderr)
     key = a.api_key or ((cfg or {}).get("api_key") or "")
     if a.url:
         base = a.url.rstrip("/")
