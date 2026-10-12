@@ -301,7 +301,10 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(B.gpu_slug({"gpu": []}), "cpu")
 
     def test_no_server_is_an_error_not_a_crash(self):
-        self.assertEqual(B.main(["--url", "http://127.0.0.1:9", "--quiet"]), 2)
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            self.assertEqual(B.main(["--url", "http://127.0.0.1:9", "--quiet"]), 2)
+        self.assertIn("No Strata server answers", stderr.getvalue())
+        self.assertNotIn("expert-profile-save", stderr.getvalue())
 
 
 if __name__ == "__main__":
